@@ -1,7 +1,7 @@
-function Import-EMAzureDNSZone {
+function Import-PScAzureDNSZone {
     <#
 .SYNOPSIS
-    Creates Azure DNS Zone and Records based on the output of the ConvertFrom-CSCZoneFile function.
+    Creates Azure DNS Zone and Records based on the output of the ConvertFrom-PScCSCZoneFile function
 
 .PARAMETER Records
     Specifies the records that are to be created.
@@ -82,7 +82,7 @@ function Import-EMAzureDNSZone {
         try {
 
             # Set default TTL if not specified
-            if (-not ($PSBoundParameters.ContainsKey("TTL"))) {
+            if (-not ($PSBoundParameters["TTL"])) {
                 [int]$TTL = "3600"
             }
 
