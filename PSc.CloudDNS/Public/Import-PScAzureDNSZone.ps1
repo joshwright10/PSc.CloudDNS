@@ -1,29 +1,14 @@
 function Import-PScAzureDNSZone {
     <#
 .SYNOPSIS
-    Creates Azure DNS Zone and Records based on the output of the ConvertFrom-PScCSCZoneFile function
+    Creates Azure DNS Zone and Records based PScDNSRecordSet objects.
+
+.DESCRIPTION
+    Creates Azure DNS Zone and Records based PScDNSRecordSet objects.
 
 .PARAMETER Records
     Specifies the records that are to be created.
-    This must be a PSObject in the following format:
-
-        ZoneName   : example.com
-        Name       : www
-        TTL        :
-        RecordType : A
-        Value      : 1.1.1.1
-        Priority   :
-        Weight     :
-        Port       :
-
-        ZoneName   : example.com
-        Name       : _sipfederationtls._tcp
-        TTL        :
-        RecordType : SRV
-        Value      : sipfed.online.lync.com.
-        Priority   : 100
-        Weight     : 1
-        Port       : 5061
+    These must be PScDNSRecordSet objects.
 
 .PARAMETER TenantId
     Specifies the ID of the tenant in which the records are to be created.
@@ -42,19 +27,22 @@ function Import-PScAzureDNSZone {
     Key-value pairs in the form of a hash table. For example: @{key0="value0";key1=$null;key2="value2"}
 
 .EXAMPLE
-    PS C:\> $Records = ConvertFrom-CSCZoneFile.ps1 -ZoneFile "C:\Temp\example.com.txt"
-    PS C:\> Import-EMAzureDNSZone -Records $Records -TenantId "xxxx-xxxx-xxxx-xxxx" -SubscriptionId "aaaa-aaaa-aaaa-aaaa" -ResourceGroupName "rg-dns" -TTL 3600
+    $Records = ConvertFrom-CSCZoneFile -ZoneFile "C:\Temp\example.com.txt"
+    Import-PScAzureDNSZone -Records $Records -TenantId "xxxx-xxxx-xxxx-xxxx" -SubscriptionId "aaaa-aaaa-aaaa-aaaa" -ResourceGroupName "rg-dns" -TTL 3600
 
     Creates the DNS Zone and DNS records that are passed in via the Records parameter.
     The DNS Zone and records are created in the Subscription and Resource Group specified. These must exist in advance.
 
 .EXAMPLE
-    PS C:\> $Records = ConvertFrom-CSCZoneFile.ps1 -ZoneFile "C:\Temp\example.com.txt"
-    PS C:\> Import-EMAzureDNSZone -Records $Records -TenantId "xxxx-xxxx-xxxx-xxxx" -SubscriptionId "aaaa-aaaa-aaaa-aaaa" -ResourceGroupName "rg-dns" -TTL 3600 -Tag @{CostCentre="VALUE"}
+    $Records = ConvertFrom-CSCZoneFile -ZoneFile "C:\Temp\example.com.txt"
+    Import-PScAzureDNSZone -Records $Records -TenantId "xxxx-xxxx-xxxx-xxxx" -SubscriptionId "aaaa-aaaa-aaaa-aaaa" -ResourceGroupName "rg-dns" -TTL 3600 -Tag @{CostCentre="VALUE"}
 
     Creates the DNS Zone and DNS records that are passed in via the Records parameter.
     The DNS Zone and records are created in the Subscription and Resource Group specified. These must exist in advance.
     The Tag of CostCentre with a value of EXAMPLE is applied.
+
+.LINK
+    http://pscclouddns.readthedocs.io/en/latest/functions/Import-PScAzureDNSZone.md
 
 #>
     [CmdletBinding()]
@@ -131,55 +119,63 @@ function Import-PScAzureDNSZone {
                         New-AzDnsZone @Splat_AzDnsZone | Out-Null
                     }
 
-                    # Loop through each record in the zone and create the required records
-                    foreach ($Record in ($Records | Where-Object { $_.ZoneName -eq $Zone })) {
+                    # Group the records for the zone and then loop through each group to create the required records.
+                    $Groups = $Records | Where-Object { $_.ZoneName -eq $Zone } | Group-Object -Property RecordType, Name
+                    foreach ($RecordGroup in $Groups) {
+                        $GroupedRecords = $RecordGroup.Group
 
-                        $ExistingRecord = Get-AzDnsRecordSet -Name $Record.Name -RecordType $Record.RecordType -ZoneName $Record.ZoneName -ResourceGroupName $ResourceGroupName -ErrorAction Ignore
+                        $Name = $GroupedRecords[0].Name
+                        $RecordType = $GroupedRecords[0].RecordType
+                        $ZoneName = $GroupedRecords[0].ZoneName
+
+                        $ExistingRecord = Get-AzDnsRecordSet -Name $Name -RecordType "$RecordType" -ZoneName $ZoneName -ResourceGroupName $ResourceGroupName -ErrorAction Ignore
                         if ($ExistingRecord) {
                             Write-Verbose -Message "Record already exists for $($Record.Name) in Zone $($Record.ZoneName)"
-                            switch ($Record.RecordType) {
-                                "A" { Add-AzDnsRecordConfig -IPv4Address $Record.Value -RecordSet $ExistingRecord | Out-Null }
-                                "AAAA" { Add-AzDnsRecordConfig -Ipv6Address $Record.Value -RecordSet $ExistingRecord | Out-Null }
-                                "CNAME" { Add-AzDnsRecordConfig -Cname $Record.Value -RecordSet $ExistingRecord | Out-Null }
-                                "MX" { Add-AzDnsRecordConfig -Exchange $Record.Value -Preference $Record.Priority -RecordSet $ExistingRecord | Out-Null }
-                                "NS" { Add-AzDnsRecordConfig -Nsdname $Record.Value -RecordSet $ExistingRecord | Out-Null }
-                                "TXT" { Add-AzDnsRecordConfig -Value $Record.Value -RecordSet $ExistingRecord | Out-Null }
-                                default {
-                                    Write-Error -Message "Unable to add DNS record to existing RecordSet. Unable to determine RecordType for $($Record.Name)" -ErrorAction Stop
+                            foreach ($Record in $GroupedRecords) {
+                                switch ($Record.RecordType) {
+                                    "A" { Add-AzDnsRecordConfig -IPv4Address $Record.Value -RecordSet $ExistingRecord | Out-Null }
+                                    "AAAA" { Add-AzDnsRecordConfig -Ipv6Address $Record.Value -RecordSet $ExistingRecord | Out-Null }
+                                    "CNAME" { Add-AzDnsRecordConfig -Cname $Record.Value -RecordSet $ExistingRecord | Out-Null }
+                                    "MX" { Add-AzDnsRecordConfig -Exchange $Record.Value -Preference $Record.Priority -RecordSet $ExistingRecord | Out-Null }
+                                    "NS" { Add-AzDnsRecordConfig -Nsdname $Record.Value -RecordSet $ExistingRecord | Out-Null }
+                                    "TXT" { Add-AzDnsRecordConfig -Value $Record.Value -RecordSet $ExistingRecord | Out-Null }
+                                    default {
+                                        Write-Error -Message "Unable to add DNS record to existing RecordSet. Unable to determine RecordType for $($Record.Name)" -ErrorAction Stop
+                                    }
                                 }
                             }
 
                             Write-Verbose -Message "Updating existsing RecordSet: $($ExistingRecord.Id)"
                             Set-AzDnsRecordSet -RecordSet $ExistingRecord -ErrorAction Stop | Out-Null
-
                         }
                         else {
-                            switch ($Record.RecordType) {
-                                "A" { $DnsRecord = New-AzDnsRecordConfig -IPv4Address $Record.Value }
-                                "AAAA" { $DnsRecord = New-AzDnsRecordConfig -Ipv6Address $Record.Value }
-                                "CNAME" { $DnsRecord = New-AzDnsRecordConfig -Cname $Record.Value }
-                                "MX" { $DnsRecord = New-AzDnsRecordConfig -Exchange $Record.Value -Preference $Record.Priority }
-                                "NS" { $DnsRecord = New-AzDnsRecordConfig -Nsdname $Record.Value }
-                                "SRV" { $DnsRecord = New-AzDnsRecordConfig -Priority $Record.Priority -Weight $Record.Weight -Port $Record.Port -Target $Record.Value }
-                                "TXT" { $DnsRecord = New-AzDnsRecordConfig -Value $Record.Value }
-                                default {
-                                    Write-Error -Message "Unable to determine RecordType for $($Record.Name)" -ErrorAction
+                            $newDnsRecord = @()
+                            foreach ($Record in $GroupedRecords) {
+                                $newDnsRecord += switch ($Record.RecordType) {
+                                    "A" { New-AzDnsRecordConfig -IPv4Address $Record.Value ; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::A }
+                                    "AAAA" { New-AzDnsRecordConfig -Ipv6Address $Record.Value ; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::AAAA }
+                                    "CNAME" { New-AzDnsRecordConfig -Cname $Record.Value ; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::CNAME }
+                                    "MX" { New-AzDnsRecordConfig -Exchange $Record.Value -Preference $Record.Priority; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::MX }
+                                    "NS" { New-AzDnsRecordConfig -Nsdname $Record.Value ; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::NS }
+                                    "SRV" { New-AzDnsRecordConfig -Priority $Record.Priority -Weight $Record.Weight -Port $Record.Port -Target $Record.Value; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::SRV }
+                                    "TXT" { New-AzDnsRecordConfig -Value $Record.Value ; $RecordType = [Microsoft.Azure.Management.Dns.Models.RecordType]::TXT }
+                                    default {
+                                        Write-Error -Message "Unable to determine RecordType for $($Record.Name)" -ErrorAction Stop
+                                    }
                                 }
                             }
 
                             $RecordParams = @{
-                                ZoneName          = $Record.ZoneName
-                                Name              = $Record.Name
-                                RecordType        = $Record.RecordType
+                                ZoneName          = [string]$ZoneName
+                                Name              = [string]$Name
+                                RecordType        = $RecordType
                                 TTL               = $TTL
-                                ResourceGroupName = $ResourceGroupName
-                                DnsRecords        = $DnsRecord
+                                ResourceGroupName = [string]$ResourceGroupName
+                                DnsRecords        = $newDnsRecord
                             }
-                            Write-Verbose -Message "Creating new $($Record.RecordType) record for $($Record.Name) in Zone $($Record.ZoneName)"
+                            Write-Verbose -Message "Creating new $($RecordType) record for '$($Name)' in Zone '$($ZoneName)'"
                             New-AzDnsRecordSet @RecordParams -ErrorAction Stop | Out-Null
-
                         }
-
                     }
                 }
                 catch {

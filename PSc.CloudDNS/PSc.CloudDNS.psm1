@@ -1,24 +1,17 @@
-﻿<#
-    ===========================================================================
-
-	-------------------------------------------------------------------------
-	 Module Name: PSc.CloudDNS
-	===========================================================================
-#>
-
+﻿
 #Get public and private function definition files.
-$Public = @( Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -Recurse -ErrorAction SilentlyContinue )
-$Private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -Recurse -ErrorAction SilentlyContinue )
+$public = @( Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -Recurse -ErrorAction SilentlyContinue )
+$private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -Recurse -ErrorAction SilentlyContinue )
 
 #Dot source the files
-Foreach ($Import in @($Public + $Private)) {
-    Try {
-        . $Import.FullName
+foreach ($import in @($Public + $Private)) {
+    try {
+        . $import.FullName
     }
-    Catch {
+    catch {
         Write-Error -Message "Failed to import function $($import.fullname): $_"
     }
 }
 
 # Export Public functions
-Export-ModuleMember -Function $Public.Basename
+Export-ModuleMember -Function $public.Basename
