@@ -1,0 +1,46 @@
+{
+    "A": {
+        "Valid": "www\t\t3600\tA\t38.113.16.56",
+        "Array": [
+            "www\t\t3600\tA\t38.113.16.56",
+            "mail\t\t700\tA\t20.1.5.47"
+        ]
+    },
+    "CNAME": {
+        "Valid": "test\t\t300\tCNAME\texample-live.azurewebsites.net.",
+        "Array": [
+            "test\t\t300\tCNAME\texample-live.azurewebsites.net.",
+            "test2\t\t4000\tCNAME\texample-uat.azurewebsites.net."
+        ]
+    },
+    "MX": {
+        "Valid": "@\t\t300\tMX\teu-smtp-inbound-1.mimecast.com.\t10",
+        "Array": [
+            "@\t\t300\tMX\teu-smtp-inbound-1.mimecast.com.\t10",
+            "@\t\t650\tMX\teu-smtp-inbound-2.mimecast.com.\t20"
+        ]
+    },
+    "NS": {
+        "Valid": "customdns1\t\t\tNS\tns1-01.azure-dns.net.\t0",
+        "Array": [
+            "customdns1\t\t\tNS\tns1-01.azure-dns.net.\t0",
+            "customdns2\t\t250\tNS\tns2-01.azure-dns.net.\t1"
+        ],
+        "Netnames": "@\t\t\tNS\tns1.netnames.net.\t0",
+        "RootRecord": "@\t\t\tNS\tns1.corpdns.net.\t0"
+    },
+    "SRV": {
+        "Valid": "_sip._tls\t\t3600\tSRV\t100\t1\t443\tsipdir.online.lync.com.",
+        "Array": [
+            "_sip._tls\t\t3600\tSRV\t100\t1\t443\tsipdir.online.lync.com.",
+            "_sipfederationtls._tcp\t\t\tSRV\t100\t1\t5061\tsipfed.online.lync.com."
+        ]
+    },
+    "TXT": {
+        "Valid": "@\t\t300\tTXT\tv=spf1 include:eu._netblocks.mimecast.com include:spf.protection.outlook.com  -all",
+        "Array": [
+            "@\t\t300\tTXT\tv=spf1 include:eu._netblocks.mimecast.com include:spf.protection.outlook.com  -all",
+            "@\t\t300\tTXT\t\"MS=ms88642848\""
+        ]
+    }
+}

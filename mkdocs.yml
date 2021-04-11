@@ -1,0 +1,15 @@
+site_name: PSc.CloudDNS
+repo_url: https://github.com/joshwright10/PSc.CloudDNS
+site_author: Josh Wright
+edit_uri: edit/master/docs/
+theme: readthedocs
+copyright: "PSc.CloudDNS is licensed under the <a href='https://raw.githubusercontent.com/joshwright10/PSc.CloudDNS/master/LICENSE'>MIT license"
+pages:
+  - Home: index.md
+  - Configuration: gettingsetup.md
+  - Scenarios:
+      - CSC to Azure DNS: migratefromCSCtoAzure.md
+  - Functions:
+      - ConvertFrom-PScCSCZoneFile: functions/ConvertFrom-PScCSCZoneFile.md
+      - Import-PScAzureDNSZone: functions/Import-PScAzureDNSZone.md
+
